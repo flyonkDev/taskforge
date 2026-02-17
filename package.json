@@ -1,0 +1,13 @@
+{
+  "name": "taskforge",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "version": "1.0.0",
+  "scripts": {
+  },
+  "author": "flyonkDev",
+  "description": "Task Manager App with NodeJS (Nest) and Nuxt 3"
+}
