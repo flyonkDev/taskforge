@@ -1,15 +1,14 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { mapPrismaError } from '../common/prisma/utils';
 
-function isPrismaUniqueError(e: unknown): e is { code: string } {
-  return (
-    typeof e === 'object' &&
-    e !== null &&
-    'code' in e &&
-    typeof (e as any).code === 'string'
-  );
-}
+const userPublicSelect = {
+  id: true,
+  email: true,
+  name: true,
+  createdAt: true,
+} as const;
 
 @Injectable()
 export class UsersService {
@@ -21,10 +20,27 @@ export class UsersService {
         data: { email: dto.email, name: dto.name },
       });
     } catch (e: unknown) {
-      if (isPrismaUniqueError(e) && e.code === 'P2002') {
-        throw new ConflictException('Email already exists');
-      }
-      throw e;
+      throw mapPrismaError(e);
     }
+  }
+
+  async findAll() {
+    return await this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: userPublicSelect,
+    });
+  }
+
+  async findOne(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: userPublicSelect,
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 }
