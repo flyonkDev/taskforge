@@ -3,9 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapPrismaError } from '../common/prisma/utils';
-import { CreateTaskDto, UpdateTaskDto, TaskStatus } from './dto/tasks.dto';
+
+import { TaskStatus } from './types/tasks.status.enum';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { GetTasksDto } from './dto/get-tasks.dto';
 
 @Injectable()
 export class TasksService {
@@ -30,6 +35,66 @@ export class TasksService {
     } catch (e: unknown) {
       throw mapPrismaError(e);
     }
+  }
+
+  async getList(query: GetTasksDto) {
+    const page = Number(query.page) || 1;
+    if (page < 1 || page > 300) {
+      throw new BadRequestException('Invalid page number');
+    }
+
+    const limit = Number(query.limit) || 20;
+    if (limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid limit');
+    }
+
+    const skip = (page - 1) * limit;
+    const status = query.status || undefined;
+
+    const where: Prisma.TaskWhereInput = {};
+
+    if (query.userId !== undefined) {
+      where.userId = query.userId;
+    }
+
+    if (status) where.status = status;
+
+    const ALLOWED_SORTING = ['title', 'status', 'createdAt'] as const;
+    type SortField = (typeof ALLOWED_SORTING)[number];
+
+    let sortBy: SortField = 'createdAt';
+
+    if (query.sortBy && ALLOWED_SORTING.includes(query.sortBy as SortField)) {
+      sortBy = query.sortBy as SortField;
+    }
+
+    const order = query.order === 'asc' ? 'asc' : 'desc';
+
+    const orderBy = {
+      [sortBy]: order,
+    };
+
+    const [total, tasks] = await this.prisma.$transaction([
+      this.prisma.task.count({ where }),
+      this.prisma.task.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const pages = Math.max(1, Math.ceil(total / limit));
+
+    return {
+      data: tasks,
+      meta: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    };
   }
 
   async getUserTasksById(id: number) {

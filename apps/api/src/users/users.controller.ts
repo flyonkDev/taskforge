@@ -5,12 +5,14 @@ import {
   Post,
   Param,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 
-import { CreateUserDto } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 import { TasksService } from '../tasks/tasks.service';
 
+import { CreateUserDto } from './dto/create-user.dto';
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
 @Controller('users')
 export class UsersController {
   constructor(
@@ -19,8 +21,8 @@ export class UsersController {
   ) {}
 
   @Get()
-  getUsersList() {
-    return this.usersService.findAll();
+  getUsersList(@Query() query: GetUsersQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   @Post()

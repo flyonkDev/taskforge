@@ -7,11 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export enum TaskStatus {
-  TODO = 'TODO',
-  IN_PROGRESS = 'IN_PROGRESS',
-  DONE = 'DONE',
-}
+import { TaskStatus } from '../types/tasks.status.enum';
 
 export class CreateTaskDto {
   @IsNumber()
@@ -21,17 +17,6 @@ export class CreateTaskDto {
   @IsString()
   @MinLength(1)
   title: string;
-
-  @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
-}
-
-export class UpdateTaskDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  title?: string;
 
   @IsOptional()
   @IsEnum(TaskStatus)
