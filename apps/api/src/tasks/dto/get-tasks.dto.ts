@@ -1,4 +1,13 @@
-import { IsString, IsEnum, IsInt, Min, Max, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  MinLength,
+  IsDateString,
+} from 'class-validator';
 
 import { Type } from 'class-transformer';
 import { TaskStatus } from '../types/tasks.status.enum';
@@ -8,6 +17,11 @@ export class GetTasksDto {
   @IsInt()
   @Type(() => Number)
   userId?: number;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  title?: string;
 
   @IsOptional()
   @IsEnum(TaskStatus)
@@ -33,4 +47,12 @@ export class GetTasksDto {
   @IsOptional()
   @IsString()
   order?: 'asc' | 'desc';
+
+  @IsOptional()
+  @IsDateString()
+  createdAfter?: string;
+
+  @IsOptional()
+  @IsDateString()
+  createdBefore?: string;
 }

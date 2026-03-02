@@ -38,7 +38,8 @@ export class TasksService {
   }
 
   async getList(query: GetTasksDto) {
-    const page = Number(query.page) || 1;
+    const page = query.page ?? 1;
+
     if (page < 1 || page > 300) {
       throw new BadRequestException('Invalid page number');
     }
@@ -49,15 +50,38 @@ export class TasksService {
     }
 
     const skip = (page - 1) * limit;
-    const status = query.status || undefined;
 
     const where: Prisma.TaskWhereInput = {};
+
+    if (query.title) {
+      where.title = {
+        contains: query.title,
+        mode: 'insensitive',
+      };
+    }
 
     if (query.userId !== undefined) {
       where.userId = query.userId;
     }
 
-    if (status) where.status = status;
+    if (query.status) where.status = query.status;
+
+    const createdAfter = query.createdAfter;
+    const createdBefore = query.createdBefore;
+
+    const createdAtFilter: Prisma.DateTimeFilter = {};
+
+    if (createdAfter) {
+      createdAtFilter.gte = new Date(createdAfter);
+    }
+
+    if (createdBefore) {
+      createdAtFilter.lte = new Date(createdBefore);
+    }
+
+    if (Object.keys(createdAtFilter).length > 0) {
+      where.createdAt = createdAtFilter;
+    }
 
     const ALLOWED_SORTING = ['title', 'status', 'createdAt'] as const;
     type SortField = (typeof ALLOWED_SORTING)[number];
