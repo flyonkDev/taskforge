@@ -38,50 +38,67 @@ export class TasksService {
   }
 
   async getList(query: GetTasksDto) {
-    const page = query.page ?? 1;
+    const {
+      userId,
+      status,
+      search,
+      createdBefore,
+      createdAfter,
+      page = 1,
+      limit = 20,
+    } = query;
 
     if (page < 1 || page > 300) {
       throw new BadRequestException('Invalid page number');
     }
 
-    const limit = Number(query.limit) || 20;
-    if (limit < 1 || limit > 100) {
+    if (limit < 1 || limit > 1000) {
       throw new BadRequestException('Invalid limit');
     }
 
-    const skip = (page - 1) * limit;
+    const afterDate = createdAfter ? new Date(createdAfter) : null;
+    const beforeDate = createdBefore ? new Date(createdBefore) : null;
+
+    if (afterDate && beforeDate && afterDate > beforeDate) {
+      throw new BadRequestException('Invalid date range');
+    }
+
+    const normalizedSearch = search ? search.trim() : null;
 
     const where: Prisma.TaskWhereInput = {};
+    const andConditions: Prisma.TaskWhereInput[] = [];
 
-    if (query.title) {
-      where.title = {
-        contains: query.title,
-        mode: 'insensitive',
-      };
+    if (userId) andConditions.push({ userId });
+    if (status) andConditions.push({ status });
+
+    // Date Range
+    if (beforeDate || afterDate) {
+      andConditions.push({
+        createdAt: {
+          ...(afterDate && { gte: new Date(afterDate) }),
+          ...(beforeDate && { lte: new Date(beforeDate) }),
+        },
+      });
     }
 
-    if (query.userId !== undefined) {
-      where.userId = query.userId;
+    if (normalizedSearch && normalizedSearch.length > 0) {
+      andConditions.push({
+        OR: [
+          {
+            title: {
+              contains: normalizedSearch,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      });
     }
 
-    if (query.status) where.status = query.status;
-
-    const createdAfter = query.createdAfter;
-    const createdBefore = query.createdBefore;
-
-    const createdAtFilter: Prisma.DateTimeFilter = {};
-
-    if (createdAfter) {
-      createdAtFilter.gte = new Date(createdAfter);
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
-    if (createdBefore) {
-      createdAtFilter.lte = new Date(createdBefore);
-    }
-
-    if (Object.keys(createdAtFilter).length > 0) {
-      where.createdAt = createdAtFilter;
-    }
+    const skip = (page - 1) * limit;
 
     const ALLOWED_SORTING = ['title', 'status', 'createdAt'] as const;
     type SortField = (typeof ALLOWED_SORTING)[number];

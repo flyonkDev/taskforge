@@ -21,7 +21,7 @@ export class GetTasksDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
-  title?: string;
+  search?: string;
 
   @IsOptional()
   @IsEnum(TaskStatus)
@@ -37,7 +37,7 @@ export class GetTasksDto {
   @IsInt()
   @Type(() => Number)
   @Min(1)
-  @Max(100)
+  @Max(1000)
   limit: number = 20;
 
   @IsOptional()
