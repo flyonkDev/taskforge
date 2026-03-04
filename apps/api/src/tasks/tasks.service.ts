@@ -3,9 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapPrismaError } from '../common/prisma/utils';
+
+import { buildTaskWhere } from './query-builders/task-where.builder';
+import { buildTaskPagination } from './query-builders/task-pagination.builder';
+import { buildTaskOrder } from './query-builders/task-order.builder';
 
 import { TaskStatus } from './types/tasks.status.enum';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -38,15 +41,9 @@ export class TasksService {
   }
 
   async getList(query: GetTasksDto) {
-    const {
-      userId,
-      status,
-      search,
-      createdBefore,
-      createdAfter,
-      page = 1,
-      limit = 20,
-    } = query;
+    const { createdBefore, createdAfter, page = 1, limit = 20 } = query;
+
+    const { skip, take } = buildTaskPagination(query);
 
     if (page < 1 || page > 300) {
       throw new BadRequestException('Invalid page number');
@@ -63,57 +60,8 @@ export class TasksService {
       throw new BadRequestException('Invalid date range');
     }
 
-    const normalizedSearch = search ? search.trim() : null;
-
-    const where: Prisma.TaskWhereInput = {};
-    const andConditions: Prisma.TaskWhereInput[] = [];
-
-    if (userId) andConditions.push({ userId });
-    if (status) andConditions.push({ status });
-
-    // Date Range
-    if (beforeDate || afterDate) {
-      andConditions.push({
-        createdAt: {
-          ...(afterDate && { gte: new Date(afterDate) }),
-          ...(beforeDate && { lte: new Date(beforeDate) }),
-        },
-      });
-    }
-
-    if (normalizedSearch && normalizedSearch.length > 0) {
-      andConditions.push({
-        OR: [
-          {
-            title: {
-              contains: normalizedSearch,
-              mode: 'insensitive',
-            },
-          },
-        ],
-      });
-    }
-
-    if (andConditions.length > 0) {
-      where.AND = andConditions;
-    }
-
-    const skip = (page - 1) * limit;
-
-    const ALLOWED_SORTING = ['title', 'status', 'createdAt'] as const;
-    type SortField = (typeof ALLOWED_SORTING)[number];
-
-    let sortBy: SortField = 'createdAt';
-
-    if (query.sortBy && ALLOWED_SORTING.includes(query.sortBy as SortField)) {
-      sortBy = query.sortBy as SortField;
-    }
-
-    const order = query.order === 'asc' ? 'asc' : 'desc';
-
-    const orderBy = {
-      [sortBy]: order,
-    };
+    const where = buildTaskWhere(query);
+    const orderBy = buildTaskOrder(query);
 
     const [total, tasks] = await this.prisma.$transaction([
       this.prisma.task.count({ where }),
@@ -121,7 +69,7 @@ export class TasksService {
         where,
         orderBy,
         skip,
-        take: limit,
+        take,
       }),
     ]);
 
