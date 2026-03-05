@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapPrismaError } from '../common/prisma/utils';
@@ -100,6 +101,43 @@ export class TasksService {
         where: { userId: id },
         orderBy: { createdAt: 'desc' },
       });
+    } catch (e: unknown) {
+      throw mapPrismaError(e);
+    }
+  }
+
+  async incrementViewById(id: number) {
+    try {
+      return await this.prisma.task.update({
+        where: { id },
+        data: {
+          viewCount: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (e: unknown) {
+      throw mapPrismaError(e);
+    }
+  }
+
+  async completeTaskById(id: number) {
+    try {
+      const tasks = await this.prisma.task.updateMany({
+        where: {
+          id,
+          status: { not: 'DONE' },
+        },
+        data: {
+          status: 'DONE',
+        },
+      });
+
+      if (tasks.count === 0) {
+        throw new ConflictException('Task already complete');
+      }
+
+      return { success: true };
     } catch (e: unknown) {
       throw mapPrismaError(e);
     }

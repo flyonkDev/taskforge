@@ -28,6 +28,16 @@ export class TasksController {
     return this.tasksService.create(dto);
   }
 
+  @Post(':id/view')
+  incrementView(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.incrementViewById(id);
+  }
+
+  @Post(':id/complete')
+  completeTask(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.completeTaskById(id);
+  }
+
   @Patch(':id')
   updateTask(
     @Param('id', ParseIntPipe) id: number,

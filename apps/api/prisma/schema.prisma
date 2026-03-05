@@ -31,5 +31,7 @@ model Task {
 
   createdAt DateTime   @default(now())
 
+  viewCount Int @default(0)
+
   @@index([userId])
 }
