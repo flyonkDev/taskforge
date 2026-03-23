@@ -1,17 +1,8 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Param,
-  ParseIntPipe,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 import { TasksService } from '../tasks/tasks.service';
 
-import { CreateUserDto } from './dto/create-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 @Controller('users')
 export class UsersController {
@@ -23,11 +14,6 @@ export class UsersController {
   @Get()
   getUsersList(@Query() query: GetUsersQueryDto) {
     return this.usersService.findAll(query);
-  }
-
-  @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
   }
 
   @Get(':id')

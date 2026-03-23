@@ -4,9 +4,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { mapPrismaError } from '../common/prisma/utils';
+// import { mapPrismaError } from '../common/prisma/utils';
 
-import { CreateUserDto } from './dto/create-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 
 const userPublicSelect = {
@@ -19,16 +18,6 @@ const userPublicSelect = {
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
-
-  async create(dto: CreateUserDto) {
-    try {
-      return await this.prisma.user.create({
-        data: { email: dto.email, name: dto.name },
-      });
-    } catch (e: unknown) {
-      throw mapPrismaError(e);
-    }
-  }
 
   async findAll(query: GetUsersQueryDto) {
     const page = Number(query.page) || 1;

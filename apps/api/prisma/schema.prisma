@@ -15,6 +15,7 @@ enum TaskStatus {
 
 model User {
   id        Int      @id @default(autoincrement())
+  passwordHash String
   email     String   @unique
   name      String
   tasks     Task[]
