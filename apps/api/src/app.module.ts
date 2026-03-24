@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { resolve } from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -8,7 +10,19 @@ import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, TasksModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), 'apps/api/.env'),
+      ],
+    }),
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    TasksModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
