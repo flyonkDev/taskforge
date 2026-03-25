@@ -16,6 +16,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { GetTasksDto } from './dto/get-tasks.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../auth/guards/ownership.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/types/jwt-payload';
 
@@ -53,6 +54,7 @@ export class TasksController {
     return this.tasksService.completeTaskById(id);
   }
 
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
   @Patch(':id')
   updateTask(
     @Param('id', ParseIntPipe) id: number,
