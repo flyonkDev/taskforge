@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from './types/jwt-payload';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapPrismaError } from '../common/prisma/utils';
 
@@ -39,6 +40,7 @@ export class AuthService {
         select: {
           id: true,
           email: true,
+          role: true,
           passwordHash: true,
         },
       });
@@ -53,10 +55,13 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      const token = this.jwtService.sign({
+      const payload: JwtPayload = {
         sub: user.id,
         email: user.email,
-      });
+        role: user.role,
+      };
+
+      const token = this.jwtService.sign(payload);
 
       return { accessToken: token };
     } catch (e: unknown) {

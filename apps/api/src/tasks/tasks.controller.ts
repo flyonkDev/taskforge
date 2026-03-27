@@ -1,9 +1,10 @@
 import {
   Controller,
+  Body,
   Get,
   Post,
   Patch,
-  Body,
+  Delete,
   Param,
   ParseIntPipe,
   Query,
@@ -17,7 +18,11 @@ import { GetTasksDto } from './dto/get-tasks.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../auth/guards/ownership.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Prisma, Role } from '@prisma/client';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import type { JwtPayload } from '../auth/types/jwt-payload';
 
 @Controller('tasks')
@@ -61,5 +66,14 @@ export class TasksController {
     @Body() dto: UpdateTaskDto,
   ) {
     return this.tasksService.updateTaskById(id, dto);
+  }
+
+  @Delete('admin/users/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  deleteUserTasks(
+    @Param('userId', ParseIntPipe) userId: number,
+  ): Promise<Prisma.BatchPayload> {
+    return this.tasksService.deleteAllByUserId(userId);
   }
 }

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapPrismaError } from '../common/prisma/utils';
 
@@ -155,6 +156,24 @@ export class TasksService {
       return await this.prisma.task.update({
         where: { id },
         data: dto,
+      });
+    } catch (e: unknown) {
+      throw mapPrismaError(e);
+    }
+  }
+
+  async deleteAllByUserId(userId: number): Promise<Prisma.BatchPayload> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return await this.prisma.task.deleteMany({
+        where: { userId },
       });
     } catch (e: unknown) {
       throw mapPrismaError(e);

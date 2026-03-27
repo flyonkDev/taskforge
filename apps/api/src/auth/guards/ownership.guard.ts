@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Request } from 'express';
 import { JwtPayload } from '../types/jwt-payload';
+import { Role } from '@prisma/client';
 import { Task } from '@prisma/client';
 
 type AuthenticatedRequest = Request & {
@@ -21,6 +22,11 @@ export class OwnershipGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const user = request.user;
+
+    if (user?.role === Role.ADMIN) {
+      return true;
+    }
 
     const taskId = +request.params['id'];
     const userId = request.user.sub; // установлен JwtAuthGuard'ом

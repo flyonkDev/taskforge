@@ -7,11 +7,12 @@ import { jwtConfig } from '../config/jwt.config';
 
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { OwnershipGuard } from '../auth/guards/ownership.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, OwnershipGuard],
-  exports: [AuthService, JwtModule, OwnershipGuard],
+  providers: [AuthService, JwtAuthGuard, OwnershipGuard, RolesGuard],
+  exports: [AuthService, JwtModule, JwtAuthGuard, OwnershipGuard, RolesGuard],
   imports: [
     ConfigModule,
     JwtModule.registerAsync({

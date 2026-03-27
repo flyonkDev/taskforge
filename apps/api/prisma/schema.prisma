@@ -13,11 +13,17 @@ enum TaskStatus {
   DONE
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   passwordHash String
   email     String   @unique
   name      String
+  role         Role     @default(USER)
   tasks     Task[]
   createdAt DateTime @default(now())
 }
