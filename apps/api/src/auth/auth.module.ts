@@ -9,9 +9,19 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { OwnershipGuard } from '../auth/guards/ownership.guard';
 import { RolesGuard } from './guards/roles.guard';
 
+import { RefreshTokenService } from './refresh-token.service';
+import { RefreshTokenGuard } from './guards/refresh-token.guard';
+
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, OwnershipGuard, RolesGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    OwnershipGuard,
+    RolesGuard,
+    RefreshTokenService,
+    RefreshTokenGuard,
+  ],
   exports: [AuthService, JwtModule, JwtAuthGuard, OwnershipGuard, RolesGuard],
   imports: [
     ConfigModule,

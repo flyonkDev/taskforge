@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './types/jwt-payload';
 import { PrismaService } from '../prisma/prisma.service';
+import { RefreshTokenService } from './refresh-token.service';
 import { mapPrismaError } from '../common/prisma/utils';
 
 import { RegisterDto } from './dto/register.dto';
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -61,11 +63,52 @@ export class AuthService {
         role: user.role,
       };
 
-      const token = this.jwtService.sign(payload);
+      const accessToken = this.jwtService.sign(payload);
+      const refreshToken = await this.refreshTokenService.generate(user.id);
 
-      return { accessToken: token };
+      return { accessToken, refreshToken };
     } catch (e: unknown) {
       throw mapPrismaError(e);
     }
+  }
+
+  async refresh(token: string) {
+    const userId = await this.refreshTokenService.validate(token);
+
+    if (!userId) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // rotation: сначала отзываем старый
+    await this.refreshTokenService.revoke(token);
+
+    // находим пользователя для актуального payload
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // генерируем новую пару
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const newRefreshToken = await this.refreshTokenService.generate(userId);
+
+    return { accessToken, refreshToken: newRefreshToken };
+  }
+
+  async logout(token: string): Promise<void> {
+    await this.refreshTokenService.revoke(token);
   }
 }
