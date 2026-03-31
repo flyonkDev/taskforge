@@ -1,11 +1,17 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  HttpException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { mapPrismaError } from '../common/prisma/utils';
 
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './types/jwt-payload';
 import { PrismaService } from '../prisma/prisma.service';
 import { RefreshTokenService } from './refresh-token.service';
-import { mapPrismaError } from '../common/prisma/utils';
+import { EmailVerificationService } from '../mail/email-verification.service';
+import { MailService } from '../mail/mail.service';
 
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -16,6 +22,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -28,6 +36,8 @@ export class AuthService {
           passwordHash: hashedPassword,
         },
       });
+
+      await this.sendVerificationEmail(user.id, user.email);
 
       return { id: user.id, email: user.email };
     } catch (e: unknown) {
@@ -79,10 +89,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // rotation: сначала отзываем старый
     await this.refreshTokenService.revoke(token);
 
-    // находим пользователя для актуального payload
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -96,7 +104,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // генерируем новую пару
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -110,5 +117,39 @@ export class AuthService {
 
   async logout(token: string): Promise<void> {
     await this.refreshTokenService.revoke(token);
+  }
+
+  async sendVerificationEmail(userId: number, email: string): Promise<void> {
+    const token = await this.emailVerificationService.generateToken(userId);
+    await this.mailService.sendVerificationEmail(email, token);
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const userId = await this.emailVerificationService.validateToken(token);
+
+    if (!userId) {
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true },
+    });
+
+    await this.emailVerificationService.consumeToken(token);
+  }
+
+  async resendVerificationEmail(userId: number, email: string): Promise<void> {
+    const canResend = await this.emailVerificationService.canResend(userId);
+
+    if (!canResend) {
+      throw new HttpException(
+        'Please wait before requesting another email',
+        429,
+      );
+    }
+
+    await this.emailVerificationService.markResendSent(userId);
+    await this.sendVerificationEmail(userId, email);
   }
 }

@@ -26,6 +26,7 @@ model User {
   role         Role     @default(USER)
   tasks     Task[]
   createdAt DateTime @default(now())
+  isVerified Boolean  @default(false)
 }
 
 model Task {
