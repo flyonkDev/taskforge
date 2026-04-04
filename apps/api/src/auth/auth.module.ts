@@ -11,6 +11,7 @@ import { OwnershipGuard } from '../auth/guards/ownership.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 import { RefreshTokenService } from './refresh-token.service';
+import { PasswordResetService } from './password-reset.service';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 
 @Module({
@@ -22,6 +23,7 @@ import { RefreshTokenGuard } from './guards/refresh-token.guard';
     RolesGuard,
     RefreshTokenService,
     RefreshTokenGuard,
+    PasswordResetService,
   ],
   exports: [AuthService, JwtModule, JwtAuthGuard, OwnershipGuard, RolesGuard],
   imports: [

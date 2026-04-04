@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { EmailVerificationService } from '../mail/email-verification.service';
 import { MailService } from '../mail/mail.service';
+import { PasswordResetService } from './password-reset.service';
 
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly mailService: MailService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -151,5 +153,48 @@ export class AuthService {
 
     await this.emailVerificationService.markResendSent(userId);
     await this.sendVerificationEmail(userId, email);
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const canRequest = await this.passwordResetService.canRequest(user.id);
+
+    if (!canRequest) {
+      return;
+    }
+
+    const token = await this.passwordResetService.generateToken(user.id);
+
+    await this.mailService.sendPasswordResetEmail(email, token);
+
+    await this.passwordResetService.markRequested(user.id);
+
+    return;
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const userId = await this.passwordResetService.validateToken(token);
+    if (!userId) {
+      throw new UnauthorizedException(
+        'Invalid or expired password reset token',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashedPassword },
+    });
+    await this.passwordResetService.consumeToken(token);
+
+    await this.refreshTokenService.revokeAll(userId);
   }
 }
